@@ -3,7 +3,7 @@ use std::error::Error;
 use std::collections::HashMap;
 use itertools::Itertools;
 
-fn find_number(s: &str, regex: &Regex) -> u32 {
+fn find_number_part1(s: &str, regex: &Regex) -> u32 {
     let (_, [digit]) = regex.captures(s)
         .expect("Failed to match regex")
         .extract();
@@ -17,7 +17,7 @@ fn part1(input: &str) -> Result<(), Box<dyn Error>> {
 
     let result: u32 = input.lines()
             .map(|s| {
-                find_number(s, &regex_first) * 10 + find_number(s, &regex_last)
+                find_number_part1(s, &regex_first) * 10 + find_number_part1(s, &regex_last)
             })
             .sum();
     println!("{}", result);
@@ -31,6 +31,14 @@ fn value_of(digit: &str, digits: &HashMap<&str, i32>) -> i32 {
     } else {
         digit.parse::<i32>().unwrap()
     }
+}
+
+fn find_number_part2(s: &str, regex: &Regex, digits: &HashMap<&str, i32>) -> i32 {
+    let (_, [digit]) = regex.captures(s)
+        .expect("Failed to match regex")
+        .extract();
+
+    value_of(digit, digits)
 }
 
 fn part2(input: &str) -> Result<(), Box<dyn Error>> {
@@ -47,15 +55,14 @@ fn part2(input: &str) -> Result<(), Box<dyn Error>> {
     ]);
 
     let pattern = digits.keys().map(|&key| key).join("|");
-    let regex = Regex::new(&(r"\d|".to_owned() + &pattern))?;
+    let regex_first = Regex::new(&(r"(\d|".to_owned() + &pattern + ").*"))?;
+    let regex_last = Regex::new(&(r".*(\d|".to_owned() + &pattern + ")"))?;
     let mut total = 0;
     for line in input.lines() {
-        let matches: Vec<_> = regex.find_iter(line).map(|m| m.as_str()).collect();
-        let value =
-            value_of(matches[0], &digits) * 10
-            + value_of(matches.last().unwrap(), &digits);
-        println!("{} {:?} {}", line, matches, value);
-        total += value;
+        let first = find_number_part2(line, &regex_first, &digits);
+        let last = find_number_part2(line, &regex_last, &digits);
+
+        total += first * 10 + last;
     }
 
     println!("{}", total);
@@ -69,7 +76,4 @@ fn main() -> Result<(), Box<dyn Error>> {
     part1(input)?;
 
     part2(input)
-    // Wrong: 54970
-    // Problem: It does not correctly handle overlapping matches. In particular, when it
-    // encounters "oneight", it will only return "one" as a match, not "eight".
 }
