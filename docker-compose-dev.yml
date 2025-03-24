@@ -1,5 +1,5 @@
 # Use to start interactive development shell using:
-#   docker-compose -f .\docker-compose-dev.yml run --rm aoc-2023
+#   docker-compose -f .\docker-compose-dev.yml run aoc-2023
 
 name: aoc-2023
 
