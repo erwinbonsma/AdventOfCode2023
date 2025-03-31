@@ -24,10 +24,6 @@ struct ItemCollection {
 }
 
 impl Range {
-    fn in_range(&self, idx: u64) -> bool {
-        idx >= self.start_idx && idx < self.start_idx + self.len
-    }
-
     fn max_idx(&self) -> u64 {
         self.start_idx + self.len
     }
@@ -39,7 +35,6 @@ impl Range {
     fn intersection(&self, other: &Range) -> Option<Range> {
         let start_idx = max(self.start_idx, other.start_idx);
         let end_idx = min(self.max_idx(), other.max_idx());
-        println!("start = {}, end = {}", start_idx, end_idx);
 
         if start_idx < end_idx {
             Some(Range { start_idx: start_idx, len: end_idx - start_idx })
@@ -76,15 +71,11 @@ impl MappingTable {
     }
 
     fn convert_range(&self, items: &Range) -> Vec<Range> {
-        println!("range = {:?}", items);
-        println!("mappings = {:?}", self.mappings);
-
         // Find the mappings that cover parts of the range
         let mut overlapping : Vec<usize> =
             (0..self.mappings.len())
                 .filter(|i| items.overlaps_with(&self.mappings[*i].src_range))
                 .collect();
-        println!("overlapping = {:?}", overlapping);
 
         // Create new ranges for the items covered by a mapping
         let mut new_items = Vec::new();
@@ -92,6 +83,7 @@ impl MappingTable {
             let mapping = &self.mappings[*i];
             let mut intersection = items.intersection(&mapping.src_range).unwrap();
             mapping.apply_shift(&mut intersection);
+            new_items.push(intersection);
         }
 
         // Create ranges for the items not covered by a mapping
@@ -113,10 +105,10 @@ impl MappingTable {
             if overlapping.len() > 1 {
                 for i in 0..overlapping.len() - 1 {
                     let start_idx = self.mappings[overlapping[i]].src_range.max_idx();
-                    new_items.push(Range {
-                        start_idx: start_idx,
-                        len: self.mappings[overlapping[i + 1]].src_range.start_idx - start_idx
-                    })
+                    let len = self.mappings[overlapping[i + 1]].src_range.start_idx - start_idx;
+                    if len > 0 {
+                        new_items.push(Range { start_idx: start_idx, len: len });
+                    }
                 }
             }
         }
@@ -185,6 +177,7 @@ fn part2(input: &str) -> Result<(), Box<dyn Error>> {
         if line.is_empty() {
             if let Some(old_items) = items {
                 let table = MappingTable::new(&line_block[1..]);
+
                 items = Some(table.convert_items(&old_items));
             } else {
                 assert!(line_block.len() == 1);
@@ -202,6 +195,8 @@ fn part2(input: &str) -> Result<(), Box<dyn Error>> {
                 items = Some(ini_items);
             }
 
+            // println!("items = {:?}", items);
+
             line_block = Vec::new();
         } else {
             line_block.push(line);
@@ -211,7 +206,6 @@ fn part2(input: &str) -> Result<(), Box<dyn Error>> {
     let table = MappingTable::new(&line_block[1..]);
     if let Some(old_items) = items {
         let final_items = table.convert_items(&old_items);
-        println!("final items = {:?}", final_items);
         let result = final_items.item_ranges.iter()
             .map(|r| r.start_idx)
             .min().unwrap();
@@ -223,8 +217,7 @@ fn part2(input: &str) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let input = include_str!("sample.txt");
+    let input = include_str!("input.txt");
 
-    // part1(input)
     part2(input)
 }
